@@ -13,6 +13,10 @@ class TextType(Enum):
 
 
 class TextNode:
+  BOLD_DELIMITER: str = "**"
+  ITALIC_DELIMITER: str = "_"
+  CODE_DELIMITER: str = "`"
+
   text: str
   text_type: TextType
   url: str | None
