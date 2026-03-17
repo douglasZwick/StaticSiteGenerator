@@ -13,6 +13,7 @@ def extract_title(markdown: str) -> str:
 
 
 def generate_page(
+    basepath: str,
     src_path: str,
     template_path: str,
     dst_path: str,
@@ -29,6 +30,8 @@ def generate_page(
   html_text = html_node.to_html()
   title = extract_title(markdown)
   html_text = template.replace("{{ Title }}", title).replace("{{ Content }}", html_text)
+  html_text = html_text.replace('href="/', f'href="{basepath}')
+  html_text = html_text.replace('src="/', f'src="{basepath}')
 
   dst_dir_path = os.path.dirname(dst_path)
   if not os.path.exists(dst_dir_path):
@@ -41,15 +44,17 @@ def generate_page(
 
 
 def generate_pages(
+    basepath: str,
     src_dir_path: str,
     template_path: str,
     dst_dir_path: str) -> None:
   print(f"Generating website from {src_dir_path} " \
     f"to {dst_dir_path} using template {template_path}")
-  generate_pages_r(src_dir_path, template_path, dst_dir_path, 0)
+  generate_pages_r(basepath, src_dir_path, template_path, dst_dir_path, 0)
 
 
 def generate_pages_r(
+    basepath: str,
     src_dir_path: str,
     template_path: str,
     dst_dir_path: str,
@@ -65,6 +70,6 @@ def generate_pages_r(
         if ext != ".md":
           continue
 
-        generate_page(from_path, template_path, dst_path, depth + 1)
+        generate_page(basepath, from_path, template_path, dst_path, depth + 1)
       else:
-        generate_pages_r(from_path, template_path, dst_path, depth + 1)
+        generate_pages_r(basepath, from_path, template_path, dst_path, depth + 1)
