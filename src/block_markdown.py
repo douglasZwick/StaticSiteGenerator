@@ -56,7 +56,7 @@ def markdown_block_to_children(markdown_block: str) -> list[HTMLNode]:
   return list(map(text_node_to_html_node, text_nodes))
 
 
-def get_paragraph_content_from_text(text: str) -> str:
+def extract_paragraph_content(text: str) -> str:
   return text.strip().replace("\n", " ")
 
 
@@ -67,63 +67,85 @@ def get_header_depth(header_block: str) -> int:
   return i
 
 
-def get_header_content_from_text(text: str) -> str:
+def extract_header_content(text: str) -> str:
   return text.lstrip("#").strip()
 
 
-def get_code_content_from_text(text: str) -> str:
+def extract_code_content(text: str) -> str:
   return text.removeprefix("```").removesuffix("```").lstrip()
 
 
-def get_ul_content_from_text(text: str) -> str:
+def extract_quote_content(text: str) -> str:
+  lines = text.split("\n")
+  output_lines = []
+
+  for line in lines:
+    output_lines.append(line.strip().lstrip(">").lstrip())
+  
+  return "\n".join(output_lines)
+
+
+def extract_ul_line(text: str) -> str:
   return text[2:]
 
 
-def get_ol_content_from_text(text: str) -> str:
+def extract_ul_lines(text: str) -> map:
+  return map(extract_ul_line, text.split("\n"))
+
+
+def extract_ol_line(text: str) -> str:
   return text[text.index(".") + 2:]
 
 
-def create_li_node(line: str) -> LeafNode:
-  return LeafNode("li", line)
+def extract_ol_lines(text: str) -> map:
+  return map(extract_ol_line, text.split("\n"))
+
+
+def create_li_node(line: str) -> ParentNode:
+  children = markdown_block_to_children(line)
+  return ParentNode("li", children)
+
+
+def create_li_nodes(lines: map) -> list[ParentNode]:
+  return list(map(create_li_node, lines))
 
 
 def create_p_node(markdown_block: str) -> ParentNode:
-  content = get_paragraph_content_from_text(markdown_block)
+  content = extract_paragraph_content(markdown_block)
   children = markdown_block_to_children(content)
   return ParentNode("p", children)
 
 
 def create_h_node(markdown_block: str) -> ParentNode:
-  content = get_header_content_from_text(markdown_block)
+  content = extract_header_content(markdown_block)
   children = markdown_block_to_children(content)
   tag = f"h{get_header_depth(markdown_block)}"
   return ParentNode(tag, children)
 
 
 def create_code_node(markdown_block: str) -> ParentNode:
-  content = get_code_content_from_text(markdown_block)
+  content = extract_code_content(markdown_block)
   text_node = TextNode(content, TextType.CODE)
   code_node = text_node_to_html_node(text_node)
   return ParentNode("pre", [code_node])
 
 
 def create_quote_node(markdown_block: str) -> ParentNode:
-  children = markdown_block_to_children(markdown_block)
+  content = extract_quote_content(markdown_block)
+  children = markdown_block_to_children(content)
   return ParentNode("blockquote", children)
 
 
 def create_ul_node(markdown_block: str) -> ParentNode:
-  lines = markdown_block.split("\n")
-  content = map(get_ul_content_from_text, lines)
-  leaf_nodes = map(create_li_node, content)
-  return ParentNode("ul", list(leaf_nodes))
+  lines = extract_ul_lines(markdown_block)
+  li_nodes = create_li_nodes(lines)
+  return ParentNode("ul", li_nodes)
 
 
 def create_ol_node(markdown_block: str) -> ParentNode:
-  lines = markdown_block.split("\n")
-  content = map(get_ol_content_from_text, lines)
-  leaf_nodes = map(create_li_node, content)
-  return ParentNode("ol", list(leaf_nodes))
+  lines = extract_ol_lines(markdown_block)
+  li_nodes = create_li_nodes(lines)
+  return ParentNode("ol", li_nodes)
   
 
 def markdown_to_html_node(markdown: str) -> HTMLNode:
