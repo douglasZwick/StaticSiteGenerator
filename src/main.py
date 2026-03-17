@@ -17,7 +17,7 @@ HTML_OUTPUT_PATH: str = PUBLIC_DIR_PATH
 
 
 def main() -> None:
-  basepath = sys.argv[0] or "/"
+  basepath = sys.argv[1] or "/"
 
   if os.path.exists(PUBLIC_DIR_PATH):
     print("Cleaning up existing public directory...")
