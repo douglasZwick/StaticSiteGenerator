@@ -1,10 +1,14 @@
 import unittest
 from textnode import TextNode, TextType, text_node_to_html_node
 from parentnode import ParentNode
-from splitnodes import split_nodes_delimiter
+from inline_markdown import (
+  split_nodes_delimiter,
+  split_nodes_image,
+  split_nodes_link,
+  text_to_text_nodes)
 
 
-class TestSplitNodes(unittest.TestCase):
+class TestSplitNodesDelimiter(unittest.TestCase):
   def test_basic_bold(self) -> None:
     nodes = [
       TextNode("Hello world", TextType.TEXT)
@@ -464,6 +468,186 @@ class TestSplitNodes(unittest.TestCase):
 
     with self.assertRaises(ValueError):
       split_nodes_delimiter(nodes, TextNode.CODE_DELIMITER, TextType.CODE)
+
+
+class TestSplitNodesImage(unittest.TestCase):
+  def test_basic(self) -> None:
+    nodes = [
+      TextNode("Text before image ![abc](xyz.com/a.png) text after image", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("Text before image ", TextType.TEXT),
+      TextNode("abc", TextType.IMAGE, "xyz.com/a.png"),
+      TextNode(" text after image", TextType.TEXT),
+    ]
+    actual = split_nodes_image(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_empty_before(self) -> None:
+    nodes = [
+      TextNode("![abc](xyz.com/a.png) text after image", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("abc", TextType.IMAGE, "xyz.com/a.png"),
+      TextNode(" text after image", TextType.TEXT),
+    ]
+    actual = split_nodes_image(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_empty_after(self) -> None:
+    nodes = [
+      TextNode("Text before image ![abc](xyz.com/a.png)", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("Text before image ", TextType.TEXT),
+      TextNode("abc", TextType.IMAGE, "xyz.com/a.png"),
+    ]
+    actual = split_nodes_image(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_two_images(self) -> None:
+    nodes = [
+      TextNode("![abc](qrs.com/a.png) between ![def](tuv.com/b.jpg)", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("abc", TextType.IMAGE, "qrs.com/a.png"),
+      TextNode(" between ", TextType.TEXT),
+      TextNode("def", TextType.IMAGE, "tuv.com/b.jpg"),
+    ]
+    actual = split_nodes_image(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_image_and_link_same_node(self) -> None:
+    nodes = [
+      TextNode("![abc](qrs.com/a.png) between [link anchor](tuv.com)", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("abc", TextType.IMAGE, "qrs.com/a.png"),
+      TextNode(" between [link anchor](tuv.com)", TextType.TEXT),
+    ]
+    actual = split_nodes_image(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_image_and_link_separate_nodes(self) -> None:
+    nodes = [
+      TextNode("Text before image ![abc](qrs.com/a.png) text after image", TextType.TEXT),
+      TextNode("Text before link [link anchor](tuv.com) text after link", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("Text before image ", TextType.TEXT),
+      TextNode("abc", TextType.IMAGE, "qrs.com/a.png"),
+      TextNode(" text after image", TextType.TEXT),
+      TextNode("Text before link [link anchor](tuv.com) text after link", TextType.TEXT),
+    ]
+    actual = split_nodes_image(nodes)
+    self.assertListEqual(expected, actual)
+
+
+class TestSplitNodesLink(unittest.TestCase):
+  def test_basic(self) -> None:
+    nodes = [
+      TextNode("Text before link [link anchor](tuv.com) text after link", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("Text before link ", TextType.TEXT),
+      TextNode("link anchor", TextType.LINK, "tuv.com"),
+      TextNode(" text after link", TextType.TEXT),
+    ]
+    actual = split_nodes_link(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_empty_before(self) -> None:
+    nodes = [
+      TextNode("[link anchor](tuv.com) text after link", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("link anchor", TextType.LINK, "tuv.com"),
+      TextNode(" text after link", TextType.TEXT),
+    ]
+    actual = split_nodes_link(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_empty_after(self) -> None:
+    nodes = [
+      TextNode("Text before link [link anchor](tuv.com)", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("Text before link ", TextType.TEXT),
+      TextNode("link anchor", TextType.LINK, "tuv.com"),
+    ]
+    actual = split_nodes_link(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_two_links(self) -> None:
+    nodes = [
+      TextNode("[link anchor a](abc.com) between [link anchor b](xyz.com)", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("link anchor a", TextType.LINK, "abc.com"),
+      TextNode(" between ", TextType.TEXT),
+      TextNode("link anchor b", TextType.LINK, "xyz.com"),
+    ]
+    actual = split_nodes_link(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_image_and_link_same_node(self) -> None:
+    nodes = [
+      TextNode("![abc](qrs.com/a.png) between [link anchor](tuv.com)", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("![abc](qrs.com/a.png) between ", TextType.TEXT),
+      TextNode("link anchor", TextType.LINK, "tuv.com"),
+    ]
+    actual = split_nodes_link(nodes)
+    self.assertListEqual(expected, actual)
+
+  def test_image_and_link_separate_nodes(self) -> None:
+    nodes = [
+      TextNode("Text before image ![abc](qrs.com/a.png) text after image", TextType.TEXT),
+      TextNode("Text before link [link anchor](tuv.com) text after link", TextType.TEXT),
+    ]
+
+    expected = [
+      TextNode("Text before image ![abc](qrs.com/a.png) text after image", TextType.TEXT),
+      TextNode("Text before link ", TextType.TEXT),
+      TextNode("link anchor", TextType.LINK, "tuv.com"),
+      TextNode(" text after link", TextType.TEXT),
+    ]
+    actual = split_nodes_link(nodes)
+    self.assertListEqual(expected, actual)
+
+
+class TestTextToTextNodes(unittest.TestCase):
+  def test_with_boot_dev_example(self) -> None:
+    text = \
+      "This is **text** with an _italic_ word and a `code block` and an " \
+      "![Obi-Wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev/)"
+    
+    expected = [
+      TextNode("This is ", TextType.TEXT),
+      TextNode("text", TextType.BOLD),
+      TextNode(" with an ", TextType.TEXT),
+      TextNode("italic", TextType.ITALIC),
+      TextNode(" word and a ", TextType.TEXT),
+      TextNode("code block", TextType.CODE),
+      TextNode(" and an ", TextType.TEXT),
+      TextNode("Obi-Wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+      TextNode(" and a ", TextType.TEXT),
+      TextNode("link", TextType.LINK, "https://boot.dev/"),
+    ]
+    actual = text_to_text_nodes(text)
+    self.assertListEqual(expected, actual)
 
 
 if __name__ == "main":

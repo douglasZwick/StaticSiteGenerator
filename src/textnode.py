@@ -35,7 +35,8 @@ class TextNode:
       
 
   def __repr__(self) -> str:
-    return f"TextNode({self.text}, TextType.{self.text_type.name}, {self.url})"
+    url_block = "" if self.url is None else f', "{self.url}"'
+    return f'TextNode("{self.text}", TextType.{self.text_type.name}{url_block})'
 
 
 def text_node_to_html_node(text_node: TextNode) -> HTMLNode:
